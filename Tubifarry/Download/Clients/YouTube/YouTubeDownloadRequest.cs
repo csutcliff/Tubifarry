@@ -142,19 +142,8 @@ namespace Tubifarry.Download.Clients.YouTube
                 Priority = RequestPriority.High,
                 DelayBetweenAttemps = Options.DelayBetweenAttemps,
                 Handler = Options.Handler,
-                RequestFailed = (_, __) =>
-                {
-                    LogAndAppendMessage($"Post-processing for track '{trackInfo.Name}' in album '{albumInfo.Name}' failed.", LogLevel.Debug);
-                    try
-                    {
-                        if (File.Exists(downloadRequest.Destination))
-                            File.Delete(downloadRequest.Destination);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Trace(ex, $"Could not delete {downloadRequest.Destination}");
-                    }
-                },
+                // Keep whatever was downloaded: a failed post-process should cost a manual import, not a re-download
+                RequestFailed = (_, __) => LogAndAppendMessage($"Post-processing for track '{trackInfo.Name}' in album '{albumInfo.Name}' failed.", LogLevel.Debug),
                 CancellationToken = token
             });
 
@@ -173,12 +162,13 @@ namespace Tubifarry.Download.Clients.YouTube
             if (!File.Exists(trackPath))
                 return false;
 
+            AudioFileContext? audioFile = null;
             try
             {
                 if (Options.AudioProcessing == null)
                     return false;
 
-                AudioFileContext audioFile = new(trackPath) { AlbumCover = _albumCover, UseID3v2_3 = Options.UseID3v2_3 };
+                audioFile = new(trackPath) { AlbumCover = _albumCover, UseID3v2_3 = Options.UseID3v2_3 };
 
                 AudioFormat format = AudioFormatHelper.ConvertOptionToAudioFormat(Options.ReEncodeOptions);
 
@@ -193,19 +183,18 @@ namespace Tubifarry.Download.Clients.YouTube
                 Album album = CreateAlbumFromYouTubeData(albumInfo);
                 Track track = CreateTrackFromYouTubeData(trackInfo, albumInfo);
 
+                // Untagged audio is still importable (or manually importable) by Lidarr, so keep the track
                 if (!Options.AudioProcessing.EmbedMetadata(audioFile, album, track))
-                {
-                    _logger.Warn($"Failed to embed metadata for: {Path.GetFileName(trackPath)}");
-                    return false;
-                }
-
-                _logger.Trace($"Successfully processed track: {Path.GetFileName(trackPath)}");
+                    _logger.Warn($"Failed to embed metadata, keeping the track untagged: {trackPath}");
+                else
+                    _logger.Trace($"Successfully processed track: {Path.GetFileName(trackPath)}");
                 return true;
             }
             catch (Exception ex)
             {
-                LogAndAppendMessage($"Post-processing failed for {Path.GetFileName(trackPath)}: {ex.Message}", LogLevel.Error);
-                return false;
+                // Same reasoning: keep the raw download rather than fail the album into a re-download
+                LogAndAppendMessage($"Post-processing failed for {Path.GetFileName(trackPath)}, keeping the raw download: {ex.Message}", LogLevel.Warn);
+                return File.Exists(audioFile?.FilePath ?? trackPath);
             }
         }
 

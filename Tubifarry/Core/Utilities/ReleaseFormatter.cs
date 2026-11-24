@@ -97,6 +97,8 @@ namespace Tubifarry.Core.Utilities
             char[] invalidPathChars = Path.GetInvalidPathChars();
             char[] invalidChars = invalidFileNameChars.Union(invalidPathChars).ToArray();
             fileName = invalidChars.Aggregate(fileName, (current, invalidChar) => current.Replace(invalidChar.ToString(), string.Empty));
+            // Valid on Linux, but FFMpegCore quotes paths with " and a stray one splits the ffprobe/ffmpeg argument
+            fileName = fileName.Replace('"', '\'');
 
             switch (_namingConfig?.ColonReplacementFormat)
             {

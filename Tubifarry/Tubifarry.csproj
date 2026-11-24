@@ -34,7 +34,6 @@
 		<PackageReference Include="FFMpegCore" Version="5.0.2" />
 		<PackageReference Include="SharpCompress" Version="0.50.4" />
 		<PackageReference Include="YamlDotNet" Version="18.1.0" />
-		<PackageReference Include="YouTubeMusicAPI" Version="3.1.0" />
 		<PackageReference Include="YouTubeSessionGenerator" Version="1.0.3" />
 	</ItemGroup>
 
@@ -47,6 +46,8 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+		<!-- Fork of YouTubeMusicAPI 3.1.0 with the signed-in album header fix, until upstream releases it -->
+		<ProjectReference Include="..\Submodules\YouTubeMusicAPI\YouTubeMusicAPI\YouTubeMusicAPI.csproj" />
 		<ProjectReference Include="..\Submodules\Lidarr\src\NzbDrone.Common\Lidarr.Common.csproj" />
 		<ProjectReference Include="..\Submodules\Lidarr\src\NzbDrone.Core\Lidarr.Core.csproj" />
 		<ProjectReference Include="..\Submodules\Lidarr\src\Lidarr.Http\Lidarr.Http.csproj">
